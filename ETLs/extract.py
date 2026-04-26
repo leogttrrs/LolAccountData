@@ -13,9 +13,9 @@ ROUTING = os.getenv("ROUTING", "americas")
 
 HEADERS = {"X-Riot-Token": API_KEY}
 
-QUEUE_IDS   = [420, 1700]
+QUEUE_IDS = [420, 1700]
 MATCH_COUNT = 100
-RATE_SLEEP  = 1.2
+RATE_SLEEP = 1.2
 
 def _get(url: str) -> dict:
     response = requests.get(url, headers=HEADERS)
@@ -92,9 +92,9 @@ def get_all_matches(match_ids: list[str]) -> list[dict]:
 def run_extract() -> tuple[str, list[dict]]:
     print("[extract] Starting extract phase...")
 
-    puuid     = get_puuid(GAME_NAME, TAG_LINE)
+    puuid = get_puuid(GAME_NAME, TAG_LINE)
     match_ids = get_match_ids(puuid)
-    matches   = get_all_matches(match_ids)
+    matches = get_all_matches(match_ids)
 
     return puuid, matches
 
