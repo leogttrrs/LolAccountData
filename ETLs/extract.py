@@ -5,11 +5,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_KEY   = os.getenv("RIOT_API_KEY")
+API_KEY = os.getenv("RIOT_API_KEY")
 GAME_NAME = os.getenv("GAME_NAME")
-TAG_LINE  = os.getenv("TAG_LINE")
-REGION    = os.getenv("REGION", "br1")
-ROUTING   = os.getenv("ROUTING", "americas")
+TAG_LINE = os.getenv("TAG_LINE")
+REGION = os.getenv("REGION", "br1")
+ROUTING = os.getenv("ROUTING", "americas")
 
 HEADERS = {"X-Riot-Token": API_KEY}
 
@@ -42,6 +42,52 @@ def get_puuid(game_name: str, tag_line: str) -> str:
     puuid = data["puuid"]
     print(f"[extract] '{game_name}#{tag_line}' → PUUID: {puuid[:16]}...")
     return puuid
+
+def get_match_ids(puuid: str) -> list[str]:
+    all_ids = []
+
+    for queue_id in QUEUE_IDS:
+        url = (
+            f"https://{ROUTING}.api.riotgames.com"
+            f"/lol/match/v5/matches/by-puuid/{puuid}/ids"
+            f"?queue={queue_id}&count={MATCH_COUNT}"
+        )
+        ids = _get(url)
+        print(f"[extract] Queue {queue_id} → {len(ids)} match IDs fetched")
+        all_ids.extend(ids)
+
+    seen       = set()
+    unique_ids = [m for m in all_ids if not (m in seen or seen.add(m))]
+
+    print(f"[extract] Total unique match IDs: {len(unique_ids)}")
+    return unique_ids
+
+def get_match_detail(match_id: str) -> dict:
+    url = (
+        f"https://{ROUTING}.api.riotgames.com"
+        f"/lol/match/v5/matches/{match_id}"
+    )
+    return _get(url)
+
+def get_all_matches(match_ids: list[str]) -> list[dict]:
+    matches = []
+
+    for i, match_id in enumerate(match_ids):
+        try:
+            match = get_match_detail(match_id)
+            matches.append(match)
+
+            if (i + 1) % 10 == 0:
+                print(f"[extract] Fetched {i + 1}/{len(match_ids)} matches...")
+
+            time.sleep(RATE_SLEEP)
+
+        except requests.HTTPError as e:
+            print(f"[extract] WARNING — skipping {match_id}: {e}")
+            continue
+
+    print(f"[extract] {len(matches)} matches successfully fetched!")
+    return matches
 
 def run_extract() -> tuple[str, list[dict]]:
     print("[extract] Starting extract phase...")
