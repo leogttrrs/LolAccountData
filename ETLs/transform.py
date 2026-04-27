@@ -5,10 +5,9 @@ QUEUE_LABELS = {
     1700: "ARENA",
 }
 
-
 def run_transform(puuid: str, matches: list[dict]) -> pd.DataFrame:
     df = _explode_participants(puuid, matches)
-
+    df = _filter_remakes(df)
 
     print(f"[transform] Done. {len(df)} rows ready to load.")
     return df
@@ -47,6 +46,15 @@ def _explode_participants(puuid: str, matches: list[dict]) -> pd.DataFrame:
 
     df = pd.DataFrame(rows)
     print(f"[transform] Exploded {len(df)} matches into rows.")
+    return df
+
+def _filter_remakes(df: pd.DataFrame) -> pd.DataFrame:
+    before = len(df)
+
+    mask = (df["game_ended_in_early_surrender"] == False) & (df["game_duration"] >= 300)
+    df = df[mask].reset_index(drop=True)
+
+    print(f"[transform] Filtered {before - len(df)} remakes. {len(df)} games remaining.")
     return df
 
 def _select_final_columns(df: pd.DataFrame) -> pd.DataFrame:
