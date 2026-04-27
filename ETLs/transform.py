@@ -9,6 +9,8 @@ def run_transform(puuid: str, matches: list[dict]) -> pd.DataFrame:
     df = _explode_participants(puuid, matches)
     df = _filter_remakes(df)
     df = _add_queue_label(df)
+    df = _parse_timestamps(df)
+    df = _compute_kda(df)
 
     print(f"[transform] Done. {len(df)} rows ready to load.")
     return df
@@ -60,6 +62,17 @@ def _filter_remakes(df: pd.DataFrame) -> pd.DataFrame:
 
 def _add_queue_label(df: pd.DataFrame) -> pd.DataFrame:
     df["queue_type"] = df["queue_id"].map(QUEUE_LABELS)
+    return df
+
+def _parse_timestamps(df: pd.DataFrame) -> pd.DataFrame:
+    df["played_at"] = pd.to_datetime(df["game_start_timestamp"], unit="ms")
+    df["patch"] = df["game_version"].apply(lambda v: ".".join(v.split(".")[:2]))
+    df["game_duration_min"] = (df["game_duration"] / 60).round(2)
+
+    return df
+
+def _compute_kda(df: pd.DataFrame) -> pd.DataFrame:
+    df["kda_score"] = ((df["kills"] + df["assists"]) / df["deaths"].clip(lower=1)).round(2)
     return df
 
 def _select_final_columns(df: pd.DataFrame) -> pd.DataFrame:
