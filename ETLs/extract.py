@@ -14,7 +14,7 @@ ROUTING = os.getenv("ROUTING", "americas")
 HEADERS = {"X-Riot-Token": API_KEY}
 
 QUEUE_IDS = [420, 1700]
-MATCH_COUNT = 100
+MATCH_COUNT = 50
 RATE_SLEEP = 1.2
 
 def _get(url: str) -> dict:

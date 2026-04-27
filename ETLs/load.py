@@ -1,4 +1,6 @@
 import os
+import uuid
+from datetime import datetime, timezone
 import pandas as pd
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
@@ -8,7 +10,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 
-def _ensure_table() -> None:
+def _ensure_tables() -> None:
     with engine.begin() as conn:
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS match_history (
@@ -31,7 +33,19 @@ def _ensure_table() -> None:
             )
         """))
 
-    print("[load] Table verified.")
+        conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS pipeline_runs (
+                        run_id              VARCHAR PRIMARY KEY,
+                        started_at          TIMESTAMP,
+                        finished_at         TIMESTAMP,
+                        matches_processed   INTEGER,
+                        rows_inserted       INTEGER,
+                        status              VARCHAR,
+                        error_message       TEXT
+                    )
+                """))
+
+    print("[load] Tablse verified.")
 
 def load_match_history(df: pd.DataFrame) -> int:
     rows_before = _count_rows("match_history")
@@ -63,7 +77,7 @@ def _upsert_on_conflict(table, conn, keys, data_iter):
 
 def run_load(df: pd.DataFrame) -> int:
     print("[load] Starting load phase...")
-    _ensure_table()
+    _ensure_tables()
     rows_inserted = load_match_history(df)
     return rows_inserted
 
@@ -71,6 +85,33 @@ def _count_rows(table_name: str) -> int:
     with engine.connect() as conn:
         result = conn.execute(text(f"SELECT COUNT(*) FROM {table_name}"))
         return result.scalar()
+
+def log_pipeline_run(
+            started_at: datetime,
+            matches_processed: int,
+            rows_inserted: int,
+            status: str,
+            error_message: str = None,
+        ) -> None:
+
+    run = pd.DataFrame([{
+        "run_id": str(uuid.uuid4()),
+        "started_at": started_at,
+        "finished_at": datetime.now(timezone.utc),
+        "matches_processed": matches_processed,
+        "rows_inserted": rows_inserted,
+        "status": status,
+        "error_message": error_message,
+    }])
+
+    run.to_sql(
+        name="pipeline_runs",
+        con=engine,
+        if_exists="append",
+        index=False,
+    )
+
+    print(f"[load] pipeline_runs → run logged as {status}.")
 
 if __name__ == "__main__":
     from extract import run_extract

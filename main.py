@@ -1,16 +1,38 @@
-# This is a sample Python script.
+from datetime import datetime, timezone
+from ETLs.extract import run_extract
+from ETLs.transform import run_transform
+from ETLs.load import run_load, log_pipeline_run
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+def main():
+    started_at = datetime.now(timezone.utc)
+    print(f"[main] Pipeline started at {started_at.strftime('%Y-%m-%d %H:%M:%S')} UTC\n")
 
+    try:
+        puuid, matches = run_extract()
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+        df = run_transform(puuid, matches)
+        rows_inserted = run_load(df)
 
+        log_pipeline_run(
+            started_at=started_at,
+            matches_processed=len(matches),
+            rows_inserted=rows_inserted,
+            status="SUCCESS",
+        )
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+        print(f"\n[main] Pipeline finished successfully. {rows_inserted} new rows inserted.")
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    except Exception as e:
+        log_pipeline_run(
+            started_at=started_at,
+            matches_processed=0,
+            rows_inserted=0,
+            status="FAILED",
+            error_message=str(e),
+        )
+
+        print(f"\n[main] Pipeline FAILED: {e}")
+        raise
+
+if __name__ == "__main__":
+    main()
