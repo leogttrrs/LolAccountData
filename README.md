@@ -31,7 +31,7 @@ The architecture follows a modular ETL approach, where each phase is independent
 ## Project Structure
 
 ```
-lol-match-history/
+/LolAccountData
 ├── ETLs/
 │   ├── extract.py       # API calls: Riot ID → PUUID → match IDs → match details
 │   ├── transform.py     # pandas transformations, feature engineering
@@ -81,8 +81,8 @@ lol-match-history/
 ### 1. Clone the repository and install dependencies
 
 ```bash
-git clone https://github.com/your-username/lol-match-history.git
-cd lol-match-history
+git clone https://github.com/leogttrrs/LolAccountData.git
+cd LolAcoountData
 pip install -r requirements.txt
 ```
 
