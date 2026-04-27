@@ -13,6 +13,8 @@ def run_transform(puuid: str, matches: list[dict]) -> pd.DataFrame:
     df = _parse_timestamps(df)
     df = _compute_kda(df)
     df = _compute_cs_per_min(df)
+    df = _compute_performance_flag(df)
+    df = _select_final_columns(df)
 
     print(f"[transform] Done. {len(df)} rows ready to load.")
     return df
@@ -85,6 +87,30 @@ def _compute_cs_per_min(df: pd.DataFrame) -> pd.DataFrame:
         (total_cs / df["game_duration_min"]).round(2),
         0.0
     )
+    return df
+
+def _compute_performance_flag(df: pd.DataFrame) -> pd.DataFrame:
+    #TODO: improve great/good/poor decision based in more values, like cs_per_min, team KDA, etc.
+
+    ranked_mask = df["queue_type"] == "RANKED"
+    arena_mask = df["queue_type"] == "ARENA"
+
+    ranked_conditions = [
+        ranked_mask & (df["win"] == True) & (df["kda_score"] >= 3.0),
+        ranked_mask & ((df["win"] == True) | (df["kda_score"] >= 2.0)),
+        ranked_mask,
+    ]
+
+    arena_conditions = [
+        arena_mask & (df["placement"] <= 2),
+        arena_mask & (df["placement"] <= 4),
+        arena_mask,
+    ]
+
+    conditions = ranked_conditions + arena_conditions
+    choices = ["GREAT", "GOOD", "POOR", "GREAT", "GOOD", "POOR"]
+
+    df["performance_flag"] = np.select(conditions, choices, default="UNKNOWN")
     return df
 
 def _select_final_columns(df: pd.DataFrame) -> pd.DataFrame:
