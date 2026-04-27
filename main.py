@@ -1,11 +1,17 @@
+import logging
 from datetime import datetime, timezone
 from ETLs.extract import run_extract
 from ETLs.transform import run_transform
 from ETLs.load import run_load, log_pipeline_run
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - [%(levelname)s] - %(message)s'
+)
+
 def main():
     started_at = datetime.now(timezone.utc)
-    print(f"[main] Pipeline started at {started_at.strftime('%Y-%m-%d %H:%M:%S')} UTC\n")
+    logging.info(f"Main: Pipeline started at {started_at.strftime('%Y-%m-%d %H:%M:%S')} UTC")
 
     try:
         puuid, matches = run_extract()
@@ -20,7 +26,7 @@ def main():
             status="SUCCESS",
         )
 
-        print(f"\n[main] Pipeline finished successfully. {rows_inserted} new rows inserted.")
+        logging.info(f"Main: Pipeline finished successfully. {rows_inserted} new rows inserted.")
 
     except Exception as e:
         log_pipeline_run(
@@ -31,7 +37,7 @@ def main():
             error_message=str(e),
         )
 
-        print(f"\n[main] Pipeline FAILED: {e}")
+        logging.error(f"Main: Pipeline FAILED: {e}")
         raise
 
 if __name__ == "__main__":

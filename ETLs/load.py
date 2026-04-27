@@ -1,3 +1,4 @@
+import logging
 import os
 import uuid
 from datetime import datetime, timezone
@@ -45,7 +46,7 @@ def _ensure_tables() -> None:
                     )
                 """))
 
-    print("[load] Tablse verified.")
+    logging.info("Load: Tables verified.")
 
 def load_match_history(df: pd.DataFrame) -> int:
     rows_before = _count_rows("match_history")
@@ -61,7 +62,7 @@ def load_match_history(df: pd.DataFrame) -> int:
     rows_after  = _count_rows("match_history")
     rows_inserted = rows_after - rows_before
 
-    print(f"[load] match_history → {rows_inserted} new rows inserted ({rows_after} total).")
+    logging.info(f"Load: match_history → {rows_inserted} new rows inserted ({rows_after} total).")
     return rows_inserted
 
 def _upsert_on_conflict(table, conn, keys, data_iter):
@@ -76,7 +77,7 @@ def _upsert_on_conflict(table, conn, keys, data_iter):
     conn.execute(stmt, rows)
 
 def run_load(df: pd.DataFrame) -> int:
-    print("[load] Starting load phase...")
+    logging.info("Load: Starting load phase...")
     _ensure_tables()
     rows_inserted = load_match_history(df)
     return rows_inserted
@@ -111,9 +112,13 @@ def log_pipeline_run(
         index=False,
     )
 
-    print(f"[load] pipeline_runs → run logged as {status}.")
+    logging.info(f"Load: pipeline_runs → run logged as {status}.")
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - [%(levelname)s] - %(message)s'
+    )
     from extract import run_extract
     from transform import run_transform
 

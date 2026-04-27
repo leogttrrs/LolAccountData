@@ -1,6 +1,7 @@
 import os
 import time
 import requests
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,7 +15,7 @@ ROUTING = os.getenv("ROUTING", "americas")
 HEADERS = {"X-Riot-Token": API_KEY}
 
 QUEUE_IDS = [420, 1700]
-MATCH_COUNT = 100
+MATCH_COUNT = 10
 RATE_SLEEP = 1.2
 
 def _get(url: str) -> dict:
@@ -22,7 +23,7 @@ def _get(url: str) -> dict:
 
     if response.status_code == 429:
         retry_after = int(response.headers.get("Retry-After", 10))
-        print(f"[extract] Rate limited — sleeping {retry_after}s")
+        logging.warning(f"Extract: Rate limited — sleeping {retry_after}s")
         time.sleep(retry_after)
         return _get(url)
 
@@ -40,7 +41,7 @@ def get_puuid(game_name: str, tag_line: str) -> str:
 
     data  = _get(url)
     puuid = data["puuid"]
-    print(f"[extract] '{game_name}#{tag_line}' → PUUID: {puuid[:16]}...")
+    logging.info(f"Extract: '{game_name}#{tag_line}' → PUUID: {puuid[:15]}...")
     return puuid
 
 def get_match_ids(puuid: str) -> list[str]:
@@ -53,13 +54,13 @@ def get_match_ids(puuid: str) -> list[str]:
             f"?queue={queue_id}&count={MATCH_COUNT}"
         )
         ids = _get(url)
-        print(f"[extract] Queue {queue_id} → {len(ids)} match IDs fetched")
+        logging.info(f"Extract: Queue {queue_id} → {len(ids)} match IDs fetched")
         all_ids.extend(ids)
 
     seen       = set()
     unique_ids = [m for m in all_ids if not (m in seen or seen.add(m))]
 
-    print(f"[extract] Total unique match IDs: {len(unique_ids)}")
+    logging.info(f"Extract: Total unique match IDs: {len(unique_ids)}")
     return unique_ids
 
 def get_match_detail(match_id: str) -> dict:
@@ -78,19 +79,19 @@ def get_all_matches(match_ids: list[str]) -> list[dict]:
             matches.append(match)
 
             if (i + 1) % 10 == 0:
-                print(f"[extract] Fetched {i + 1}/{len(match_ids)} matches...")
+                logging.info(f"Extract: Fetched {i + 1}/{len(match_ids)} matches...")
 
             time.sleep(RATE_SLEEP)
 
         except requests.HTTPError as e:
-            print(f"[extract] WARNING — skipping {match_id}: {e}")
+            logging.error(f"Extract: WARNING — skipping {match_id}: {e}")
             continue
 
-    print(f"[extract] {len(matches)} matches successfully fetched!")
+    logging.info(f"Extract: {len(matches)} matches successfully fetched!")
     return matches
 
 def run_extract() -> tuple[str, list[dict]]:
-    print("[extract] Starting extract phase...")
+    logging.info("Extract: Starting extract phase...")
 
     puuid = get_puuid(GAME_NAME, TAG_LINE)
     match_ids = get_match_ids(puuid)
@@ -99,5 +100,9 @@ def run_extract() -> tuple[str, list[dict]]:
     return puuid, matches
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - [%(levelname)s] - %(message)s'
+    )
     puuid, matches = run_extract()
     print(f"\nSample match keys: {list(matches[0].keys()) if matches else 'No matches'}")

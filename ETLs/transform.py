@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import pandas as pd
 
@@ -16,7 +17,7 @@ def run_transform(puuid: str, matches: list[dict]) -> pd.DataFrame:
     df = _compute_performance_flag(df)
     df = _select_final_columns(df)
 
-    print(f"[transform] Done. {len(df)} rows ready to load.")
+    logging.info(f"Transform: Done. {len(df)} rows ready to load.")
     return df
 
 def _explode_participants(puuid: str, matches: list[dict]) -> pd.DataFrame:
@@ -52,7 +53,7 @@ def _explode_participants(puuid: str, matches: list[dict]) -> pd.DataFrame:
                 break
 
     df = pd.DataFrame(rows)
-    print(f"[transform] Exploded {len(df)} matches into rows.")
+    logging.info(f"Transform: Exploded {len(df)} matches into rows.")
     return df
 
 def _filter_remakes(df: pd.DataFrame) -> pd.DataFrame:
@@ -61,7 +62,7 @@ def _filter_remakes(df: pd.DataFrame) -> pd.DataFrame:
     mask = (df["game_ended_in_early_surrender"] == False) & (df["game_duration"] >= 300)
     df = df[mask].reset_index(drop=True)
 
-    print(f"[transform] Filtered {before - len(df)} remakes. {len(df)} games remaining.")
+    logging.info(f"Transform: Filtered {before - len(df)} remakes. {len(df)} games remaining.")
     return df
 
 def _add_queue_label(df: pd.DataFrame) -> pd.DataFrame:
@@ -134,6 +135,10 @@ def _select_final_columns(df: pd.DataFrame) -> pd.DataFrame:
     ]]
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - [%(levelname)s] - %(message)s'
+    )
     from extract import run_extract
 
     puuid, matches = run_extract()
