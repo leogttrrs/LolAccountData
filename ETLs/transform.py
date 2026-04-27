@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 QUEUE_LABELS = {
@@ -11,6 +12,7 @@ def run_transform(puuid: str, matches: list[dict]) -> pd.DataFrame:
     df = _add_queue_label(df)
     df = _parse_timestamps(df)
     df = _compute_kda(df)
+    df = _compute_cs_per_min(df)
 
     print(f"[transform] Done. {len(df)} rows ready to load.")
     return df
@@ -73,6 +75,16 @@ def _parse_timestamps(df: pd.DataFrame) -> pd.DataFrame:
 
 def _compute_kda(df: pd.DataFrame) -> pd.DataFrame:
     df["kda_score"] = ((df["kills"] + df["assists"]) / df["deaths"].clip(lower=1)).round(2)
+    return df
+
+def _compute_cs_per_min(df: pd.DataFrame) -> pd.DataFrame:
+    total_cs = df["total_minions_killed"] + df["neutral_minions_killed"]
+
+    df["cs_per_min"] = np.where(
+        df["queue_type"] == "RANKED",
+        (total_cs / df["game_duration_min"]).round(2),
+        0.0
+    )
     return df
 
 def _select_final_columns(df: pd.DataFrame) -> pd.DataFrame:
