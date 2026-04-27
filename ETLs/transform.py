@@ -8,6 +8,7 @@ QUEUE_LABELS = {
 def run_transform(puuid: str, matches: list[dict]) -> pd.DataFrame:
     df = _explode_participants(puuid, matches)
     df = _filter_remakes(df)
+    df = _add_queue_label(df)
 
     print(f"[transform] Done. {len(df)} rows ready to load.")
     return df
@@ -55,6 +56,10 @@ def _filter_remakes(df: pd.DataFrame) -> pd.DataFrame:
     df = df[mask].reset_index(drop=True)
 
     print(f"[transform] Filtered {before - len(df)} remakes. {len(df)} games remaining.")
+    return df
+
+def _add_queue_label(df: pd.DataFrame) -> pd.DataFrame:
+    df["queue_type"] = df["queue_id"].map(QUEUE_LABELS)
     return df
 
 def _select_final_columns(df: pd.DataFrame) -> pd.DataFrame:
